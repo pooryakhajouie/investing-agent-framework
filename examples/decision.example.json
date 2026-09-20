@@ -1,0 +1,86 @@
+{
+  "action": "buy",
+  "alternatives_considered": [
+    {
+      "provenance": "OPEN_DISCOVERY",
+      "symbol": "ITOT",
+      "why_not": "Equivalent exposure, no edge."
+    },
+    {
+      "provenance": "CURRENT_HOLDING",
+      "symbol": "BTC-USD",
+      "why_not": "Already the largest single exposure."
+    }
+  ],
+  "asset_class": "ETF",
+  "asset_type": "us_etf",
+  "classification": "ADD_CANDIDATE",
+  "confidence": "MEDIUM",
+  "cost_basis_analysis": {
+    "average_cost_usd": "83.92",
+    "current_price_usd": "230.00",
+    "economic_meaning": "The average cost rising is not itself a cost; what matters is expected forward return from today's price.",
+    "raises_or_lowers_average": "RAISES"
+  },
+  "current_price_usd": "120.00",
+  "decision": "BUY",
+  "decision_id": "dec_0000000000000001",
+  "evidence": [
+    {
+      "detail": "last price as of today",
+      "tool": "get_equity_quotes"
+    },
+    {
+      "detail": "eight quarters of revenue and margin",
+      "source_type": "OFFICIAL_FINANCIALS",
+      "tool": "get_financials"
+    },
+    {
+      "detail": "balance sheet concepts from the latest 10-Q",
+      "source_type": "SEC_FILING",
+      "tool": "get_sec_filing_facts"
+    }
+  ],
+  "exchange": "NYSEARCA",
+  "fractional_eligible": true,
+  "invalidation": "Two consecutive quarters of declining unit volume would end the thesis.",
+  "investment_horizon_months": 60,
+  "margin_for_error": "A 30% multiple compression would still leave the position above the cost basis within the stated horizon.",
+  "month": "2026-01",
+  "monthly_budget_after_usd": "15.00",
+  "monthly_budget_before_usd": "25.00",
+  "monthly_optionality": {
+    "candidates_being_watched": "Two names on the watchlist pending deeper research.",
+    "days_remaining_in_month": 12,
+    "dry_powder_benefit": "Preserving budget would allow a response to the late-month print.",
+    "known_events_this_month": "One portfolio holding reports earnings later this month.",
+    "partial_deployment_considered": "Considered a smaller tranche; the position would be too small to matter.",
+    "probability_ranking_changes": "Low: no candidate is close enough to overtake this one on the available data."
+  },
+  "monthly_optionality_analysis": "This purchase consumes more than half the month's authorization before mid-month. That is justified here because the alternative uses of the capital were explicitly ranked and none is close, the known late-month event affects a holding this decision does not touch, and a smaller tranche would produce a position too small to matter against the existing book.",
+  "portfolio_exposure": "This subtheme is currently 4% of the portfolio.",
+  "portfolio_sprawl_assessment": {
+    "concentration_alternative": "Adding to the strongest existing holding was compared and rejected on concentration grounds.",
+    "economic_significance_of_this_add": "A $25 position is 1.9% of the portfolio, larger than 12 existing positions.",
+    "overlap_analysis": "No meaningful overlap with existing holdings.",
+    "position_count": "20 equity and 9 crypto positions today.",
+    "smallest_positions": "Six positions are under $10."
+  },
+  "position_type": "EXISTING_POSITION",
+  "proposed_amount_usd": "10.00",
+  "quote_timestamp": "2026-09-04T15:30:00Z",
+  "risks": "Cyclical demand, customer concentration, and multiple compression.",
+  "security_name": "Index Fund Example",
+  "side": "buy",
+  "theme": {
+    "primary": "semiconductors",
+    "scope_caveat": "AI accelerators only; this does not address memory, networking, or semiconductor equipment.",
+    "subtheme": "ai_accelerators"
+  },
+  "thesis": "Broad market index: durable long-term exposure at a defensible entry.",
+  "ticker": "IDXF",
+  "timing_reason": "The entry price already offers an adequate expected return; the case does not depend on a pending event.",
+  "valuation_reasoning": "Trades near the low end of its own five-year range on forward earnings.",
+  "value_creation": "Future value comes from unit growth and margin expansion, not multiple expansion.",
+  "why_not_wait": "Waiting would require expecting a materially better price, which is a forecast this agent will not make; expected return at $300.00 already clears the threshold."
+}

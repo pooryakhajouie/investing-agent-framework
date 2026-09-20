@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "month": "2026-01",
+  "authorized_budget_usd": "25.00",
+  "committed_usd": "0.00",
+  "remaining_usd": "25.00",
+  "acted_decision_ids": [],
+  "last_updated": "2026-01-01T00:00:00Z"
+}

@@ -1,0 +1,16 @@
+{
+  "monthly_budget_usd": "25.00",
+  "min_investment_horizon_months": 24,
+  "execution_mode": "DRY_RUN",
+  "agent_enabled": false,
+  "live_trading": false,
+  "allow_selling": false,
+  "allow_options": false,
+  "allow_margin": false,
+  "allow_shorting": false,
+  "allow_crypto": true,
+  "allow_leveraged_etfs": false,
+  "allow_inverse_etfs": false,
+  "allow_transfers": false,
+  "strategy": "long_term_buy_and_hold"
+}

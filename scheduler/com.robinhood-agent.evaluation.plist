@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.robinhood-agent.evaluation</string>
+
+  <!-- REPORT ONLY. This job never enables execution, never approves anything,
+       never exposes an order tool and never submits anything. The runner
+       verifies those invariants by digest before and after every run. -->
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>__REPO_ROOT__/scripts/scheduled_evaluation.sh</string>
+    <string>--slot</string>
+    <string>am</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>__REPO_ROOT__</string>
+
+  <!-- Weekdays only. launchd fires on the Mac's local time; this machine is
+       already America/Chicago, so 10:30 here is 10:30 America/Chicago.
+       Weekday 1=Monday .. 5=Friday. -->
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict>
+      <key>Weekday</key><integer>1</integer>
+      <key>Hour</key><integer>10</integer>
+      <key>Minute</key><integer>30</integer>
+    </dict>
+    <dict>
+      <key>Weekday</key><integer>2</integer>
+      <key>Hour</key><integer>10</integer>
+      <key>Minute</key><integer>30</integer>
+    </dict>
+    <dict>
+      <key>Weekday</key><integer>3</integer>
+      <key>Hour</key><integer>10</integer>
+      <key>Minute</key><integer>30</integer>
+    </dict>
+    <dict>
+      <key>Weekday</key><integer>4</integer>
+      <key>Hour</key><integer>10</integer>
+      <key>Minute</key><integer>30</integer>
+    </dict>
+    <dict>
+      <key>Weekday</key><integer>5</integer>
+      <key>Hour</key><integer>10</integer>
+      <key>Minute</key><integer>30</integer>
+    </dict>
+  </array>
+
+  <!-- launchd reads no .zshrc, sources no nvm.sh, and inherits nothing from an
+       open Terminal. Every value below is written by
+       scripts/resolve_launchd_runtime.py at install time, from absolute paths
+       it verified by actually running the executable under this same minimal
+       environment. NODE_BIN is empty when this Claude Code install is a native
+       binary that needs no Node runtime. -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>TZ</key>
+    <string>America/Chicago</string>
+    <key>PATH</key>
+    <string>__PATH__</string>
+    <key>HOME</key>
+    <string>__HOME__</string>
+    <key>CLAUDE_BIN</key>
+    <string>__CLAUDE_BIN__</string>
+    <key>NODE_BIN</key>
+    <string>__NODE_BIN__</string>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>__REPO_ROOT__/logs/scheduled/launchd.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>__REPO_ROOT__/logs/scheduled/launchd.err.log</string>
+
+  <!-- Do not fire a missed run on wake; a stale 10:30 scan at 9pm is noise. -->
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+</dict>
+</plist>

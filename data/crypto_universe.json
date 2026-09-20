@@ -1,0 +1,985 @@
+{
+  "schema_version": 1,
+  "source": "robinhood-trading MCP get_currency_pairs",
+  "fetched_at": "2026-09-04T23:50:50Z",
+  "note": "Snapshot of Robinhood-supported crypto pairs. Contains no account or credential data. Refresh with scripts/update_crypto_universe.py.",
+  "pairs": {
+    "AAVE-USD": {
+      "name": "Aave to US Dollar",
+      "code": "AAVE",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.0001"
+    },
+    "ADA-USD": {
+      "name": "Cardano to US Dollar",
+      "code": "ADA",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "AERO-USD": {
+      "name": "Aerodrome Finance to US Dollar",
+      "code": "AERO",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "ALGO-USD": {
+      "name": "Algorand to US Dollar",
+      "code": "ALGO",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "1"
+    },
+    "ARB-USD": {
+      "name": "Arbitrum to US Dollar",
+      "code": "ARB",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "ASTER-USD": {
+      "name": "Aster to US Dollar",
+      "code": "ASTER",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "0.01"
+    },
+    "ATOM-USD": {
+      "name": "Cosmos to US Dollar",
+      "code": "ATOM",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "AVAX-USD": {
+      "name": "Avalanche to US Dollar",
+      "code": "AVAX",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.001"
+    },
+    "AVNT-USD": {
+      "name": "Avantis to USD",
+      "code": "AVNT",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "AXS-USD": {
+      "name": "Axie Infinity to US Dollar",
+      "code": "AXS",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "BAT-USD": {
+      "name": "Basic Attention Token to US Dollar",
+      "code": "BAT",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "1"
+    },
+    "BCH-USD": {
+      "name": "Bitcoin Cash to US Dollar",
+      "code": "BCH",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.001"
+    },
+    "BILL-USD": {
+      "name": "Billions Network to US Dollar",
+      "code": "BILL",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "1"
+    },
+    "BIO-USD": {
+      "name": "Bio Protocol to US Dollar",
+      "code": "BIO",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "1"
+    },
+    "BNB-USD": {
+      "name": "BNB to US Dollar",
+      "code": "BNB",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "0.0001"
+    },
+    "BONK-USD": {
+      "name": "Bonk to US Dollar",
+      "code": "BONK",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "1000"
+    },
+    "BTC-USD": {
+      "name": "Bitcoin to US Dollar",
+      "code": "BTC",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.000001"
+    },
+    "CASHCAT-USD": {
+      "name": "Cash Cat to US Dollar",
+      "code": "CASHCAT",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "1"
+    },
+    "CC-USD": {
+      "name": "Canton to USD",
+      "code": "CC",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "1"
+    },
+    "CHIP-USD": {
+      "name": "USD.AI to US Dollar",
+      "code": "CHIP",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "1"
+    },
+    "COMP-USD": {
+      "name": "Compound to US Dollar",
+      "code": "COMP",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.0001"
+    },
+    "CRV-USD": {
+      "name": "Curve to US Dollar",
+      "code": "CRV",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "DOGE-USD": {
+      "name": "Dogecoin to US Dollar",
+      "code": "DOGE",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "1"
+    },
+    "DOT-USD": {
+      "name": "Polkadot to US Dollar",
+      "code": "DOT",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.01"
+    },
+    "EIGEN-USD": {
+      "name": "Eigenlayer to US Dollar",
+      "code": "EIGEN",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "1"
+    },
+    "ENA-USD": {
+      "name": "Ethena to US Dollar",
+      "code": "ENA",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "ETC-USD": {
+      "name": "Ethereum Classic to US Dollar",
+      "code": "ETC",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.01"
+    },
+    "ETH-USD": {
+      "name": "Ethereum to US Dollar",
+      "code": "ETH",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.0001"
+    },
+    "FET-USD": {
+      "name": "Artificial Superintelligence to US Dollar",
+      "code": "FET",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "1"
+    },
+    "FLOKI-USD": {
+      "name": "Floki Inu to US Dollar",
+      "code": "FLOKI",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "1000"
+    },
+    "FLR-USD": {
+      "name": "Flare  to US Dollar",
+      "code": "FLR",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "20"
+    },
+    "GRAM-USD": {
+      "name": "GRAM to US Dollar",
+      "code": "GRAM",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "0.01"
+    },
+    "GRT-USD": {
+      "name": "The Graph to US Dollar",
+      "code": "GRT",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "1"
+    },
+    "HBAR-USD": {
+      "name": "Hedera to US Dollar",
+      "code": "HBAR",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "HYPE-USD": {
+      "name": "Hyperliquid to USD",
+      "code": "HYPE",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "0.001"
+    },
+    "IMX-USD": {
+      "name": "ImmutableX to US Dollar",
+      "code": "IMX",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "1"
+    },
+    "INJ-USD": {
+      "name": "Injective to US Dollar",
+      "code": "INJ",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.01"
+    },
+    "JTO-USD": {
+      "name": "Jito Network to US Dollar",
+      "code": "JTO",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "LDO-USD": {
+      "name": "LidoDAO to US Dollar",
+      "code": "LDO",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "LINK-USD": {
+      "name": "Chainlink to US Dollar",
+      "code": "LINK",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.01"
+    },
+    "LIT-USD": {
+      "name": "Lighter to US Dollar",
+      "code": "LIT",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "0.01"
+    },
+    "LTC-USD": {
+      "name": "Litecoin to US Dollar",
+      "code": "LTC",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.001"
+    },
+    "MEGA-USD": {
+      "name": "MegaETH to US Dollar",
+      "code": "MEGA",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "1"
+    },
+    "MEW-USD": {
+      "name": "cat in a dogs world to US Dollar",
+      "code": "MEW",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "10"
+    },
+    "MNT-USD": {
+      "name": "Mantle to US Dollar",
+      "code": "MNT",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "MOODENG-USD": {
+      "name": "Moo Deng to US Dollar",
+      "code": "MOODENG",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "MORPHO-USD": {
+      "name": "Morpho Network to US Dollar",
+      "code": "MORPHO",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.01"
+    },
+    "NEAR-USD": {
+      "name": "NEAR Protocol to US Dollar",
+      "code": "NEAR",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "ONDO-USD": {
+      "name": "Ondo to US Dollar",
+      "code": "ONDO",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "OP-USD": {
+      "name": "Optimism to US Dollar",
+      "code": "OP",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "ORCA-USD": {
+      "name": "Orca to US Dollar",
+      "code": "ORCA",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "PAXG-USD": {
+      "name": "Pax Gold to US Dollar",
+      "code": "PAXG",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "0.00001"
+    },
+    "PENGU-USD": {
+      "name": "Pudgy Penguins to US Dollar",
+      "code": "PENGU",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "10"
+    },
+    "PEPE-USD": {
+      "name": "Pepe to US Dollar",
+      "code": "PEPE",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "10000"
+    },
+    "PNUT-USD": {
+      "name": "Peanut the Squirrel to US Dollar",
+      "code": "PNUT",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "1"
+    },
+    "POL-USD": {
+      "name": "Polygon to US Dollar",
+      "code": "POL",
+      "tradability": "untradable",
+      "individual_tradability": "untradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": true,
+      "min_order_size": "0.1"
+    },
+    "POPCAT-USD": {
+      "name": "Popcat to US Dollar",
+      "code": "POPCAT",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "PYTH-USD": {
+      "name": "Pyth Network to US Dollar",
+      "code": "PYTH",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "1"
+    },
+    "QNT-USD": {
+      "name": "Quant to US Dollar",
+      "code": "QNT",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.001"
+    },
+    "RAY-USD": {
+      "name": "Raydium to US Dollar",
+      "code": "RAY",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "1"
+    },
+    "RE-USD": {
+      "name": "RE to US Dollar",
+      "code": "RE",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "RENDER-USD": {
+      "name": "Render to US Dollar",
+      "code": "RENDER",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.01"
+    },
+    "SEI-USD": {
+      "name": "Sei to US Dollar",
+      "code": "SEI",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "SENT-USD": {
+      "name": "Sentient to US Dollar",
+      "code": "SENT",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "10"
+    },
+    "SHIB-USD": {
+      "name": "Shiba Inu to US Dollar",
+      "code": "SHIB",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "800"
+    },
+    "SKR-USD": {
+      "name": "Seeker to US Dollar",
+      "code": "SKR",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "10"
+    },
+    "SKY-USD": {
+      "name": "Sky to US Dollar",
+      "code": "SKY",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "1"
+    },
+    "SNX-USD": {
+      "name": "Synthetix to US Dollar",
+      "code": "SNX",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "SOL-USD": {
+      "name": "Solana to US Dollar",
+      "code": "SOL",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.0001"
+    },
+    "STRK-USD": {
+      "name": "Starknet Token to US Dollar",
+      "code": "STRK",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "5"
+    },
+    "SUI-USD": {
+      "name": "Sui to US dollar",
+      "code": "SUI",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.01"
+    },
+    "SYRUP-USD": {
+      "name": "Syrup Token to US Dollar",
+      "code": "SYRUP",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "TRUMP-USD": {
+      "name": "OFFICIAL TRUMP to USD",
+      "code": "TRUMP",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "0.001"
+    },
+    "UNI-USD": {
+      "name": "Uniswap to US Dollar",
+      "code": "UNI",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.01"
+    },
+    "USDC-USD": {
+      "name": "USD Coin to US Dollar",
+      "code": "USDC",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "TX"
+      ],
+      "display_only": false,
+      "min_order_size": "0.01"
+    },
+    "USDG-USD": {
+      "name": "Global Dollar to US Dollar",
+      "code": "USDG",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY",
+        "TX"
+      ],
+      "display_only": false,
+      "min_order_size": "0.01"
+    },
+    "VIRTUAL-USD": {
+      "name": "Virtual Protocol to US Dollar",
+      "code": "VIRTUAL",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "VVV-USD": {
+      "name": "Venice Token to US Dollar",
+      "code": "VVV",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.01"
+    },
+    "W-USD": {
+      "name": "Wormhole Token to US Dollar",
+      "code": "W",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "10"
+    },
+    "WIF-USD": {
+      "name": "dogwifhat to US Dollar",
+      "code": "WIF",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.01"
+    },
+    "WLD-USD": {
+      "name": "Worldcoin to US Dollar",
+      "code": "WLD",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "WLFI-USD": {
+      "name": "World Liberty Financial to US Dollar",
+      "code": "WLFI",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "1"
+    },
+    "XCN-USD": {
+      "name": "Onyxcoin to US Dollar",
+      "code": "XCN",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "10"
+    },
+    "XLM-USD": {
+      "name": "Stellar Lumens to US Dollar",
+      "code": "XLM",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "1"
+    },
+    "XPL-USD": {
+      "name": "Plasma to US Dollar",
+      "code": "XPL",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "XRP-USD": {
+      "name": "XRP to US Dollar",
+      "code": "XRP",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "XTZ-USD": {
+      "name": "Tezos to US Dollar",
+      "code": "XTZ",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.01"
+    },
+    "ZEC-USD": {
+      "name": "Zcash to US Dollar",
+      "code": "ZEC",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "0.001"
+    },
+    "ZORA-USD": {
+      "name": "Zora to US Dollar",
+      "code": "ZORA",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "1"
+    },
+    "ZRO-USD": {
+      "name": "LayerZero to US Dollar",
+      "code": "ZRO",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": true,
+      "halted_regions": [
+        "NY"
+      ],
+      "display_only": false,
+      "min_order_size": "0.1"
+    },
+    "ZRX-USD": {
+      "name": "0x to US Dollar",
+      "code": "ZRX",
+      "tradability": "tradable",
+      "individual_tradability": "tradable",
+      "halted": false,
+      "halted_regions": [],
+      "display_only": false,
+      "min_order_size": "5"
+    }
+  }
+}

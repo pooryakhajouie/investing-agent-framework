@@ -1,0 +1,94 @@
+# --- Secrets: never commit anything that could authenticate to Robinhood ---
+.env
+.env.*
+*.pem
+*.key
+credentials*
+*credential*
+*secret*
+*token*
+*cookie*
+*session*
+.robinhood/
+auth.json
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# --- Personal financial history: LOCAL ONLY, never committed ---
+# state/portfolio_history.json is the normalized record of every historical
+# purchase, sale and tax lot across all accounts. Account identifiers inside it
+# are masked, but the holdings-and-dates detail is personal and stays local.
+state/portfolio_history.json
+state/portfolio_history.json.bak
+state/portfolio_history.json.tmp
+
+# --- Local scratch / overrides (state and logs ARE tracked on purpose) ---
+*.local.json
+scratch/
+tmp/
+
+# Broker snapshots hold a balance tied to a masked account (CLAUDE.md 10).
+broker.json
+state/broker_snapshot.json
+state/promotion_snapshot.json
+
+# Scheduler and discovery runtime logs. Operational output of individual runs,
+# regenerated every time, and read by nothing: archive_inventory() protects only
+# reports/ and research/, and every test reference to these paths is a
+# write-scope assertion or a temp-dir fixture.
+#
+# Narrow on purpose. logs/decisions.jsonl and logs/execution_audit.jsonl are the
+# append-only audit record and stay tracked; ignoring logs/ wholesale would drop
+# them.
+logs/scheduled/*.log
+logs/discovery/*.log
+logs/scheduled_usage.jsonl
+logs/discovery_usage.jsonl
+
+# --- Public release: local bootstrap files, never published ---
+# Copy the checked-in templates to create these:
+#   cp config.example.json config.json
+#   cp .claude/settings.example.json .claude/settings.json
+# They are the LIVE operating configuration of whoever runs this, so the
+# repository ships the templates and ignores the instances.
+config.json
+.claude/settings.json
+
+# Runtime output. This repository publishes the framework, never a portfolio:
+# state, logs, and any report or research note a real run produces stay local.
+#
+# Note the trailing /* rather than /: git cannot re-include a file inside an
+# excluded *directory*, so excluding "reports/" would make the negations below
+# silently do nothing and the synthetic fixtures would never be committed.
+state/*
+logs/
+reports/*
+research/*
+
+# The state template scripts/bootstrap.sh copies into place.
+!state/budget.example.json
+
+# The synthetic fixtures the test suite reads. Everything in these two files and
+# the four notes is invented -- see SECURITY.md.
+!reports/latest.md
+!reports/2026-01-16_0930.md
+!research/INDEX.md
+!research/EXMP.md
+!research/IDXF.md
+!research/NEWC.md
+!research/ZZC-USD.md

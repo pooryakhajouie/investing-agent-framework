@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.robinhood-agent.discovery</string>
+
+  <!-- WEEKLY BROAD DISCOVERY. REPORT ONLY, AND PROPOSES NOTHING.
+       This job widens the candidate universe so new companies, ETFs, themes
+       and eligible crypto can enter consideration without being added by hand.
+       It never enables execution, never approves anything, never exposes an
+       order tool, never submits anything, and — unlike the weekday evaluation
+       — it does not even recommend a purchase. The monthly $25 authorization
+       is decided only by com.robinhood-agent.evaluation.
+       scripts/record_discovery_run.py rejects a report that declares a
+       decision, proposes an allocation, or uses approval language. -->
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>__REPO_ROOT__/scripts/weekly_discovery.sh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>__REPO_ROOT__</string>
+
+  <!-- Saturday 09:00 America/Chicago. Deliberately off-session: discovery
+       needs no live tape, and running it when no market is open makes it
+       structurally impossible to confuse with a trading decision.
+       Weekday 6 = Saturday. -->
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict>
+      <key>Weekday</key><integer>6</integer>
+      <key>Hour</key><integer>9</integer>
+      <key>Minute</key><integer>0</integer>
+    </dict>
+  </array>
+
+  <!-- launchd reads no .zshrc, sources no nvm.sh, and inherits nothing from an
+       open Terminal. Every value below is written by
+       scripts/resolve_launchd_runtime.py at install time, from absolute paths
+       it verified by actually running the executable under this same minimal
+       environment. NODE_BIN is empty when this Claude Code install is a native
+       binary that needs no Node runtime. -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>TZ</key>
+    <string>America/Chicago</string>
+    <key>PATH</key>
+    <string>__PATH__</string>
+    <key>HOME</key>
+    <string>__HOME__</string>
+    <key>CLAUDE_BIN</key>
+    <string>__CLAUDE_BIN__</string>
+    <key>NODE_BIN</key>
+    <string>__NODE_BIN__</string>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>__REPO_ROOT__/logs/discovery/launchd.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>__REPO_ROOT__/logs/discovery/launchd.err.log</string>
+
+  <!-- Do not fire a missed run on wake; a stale sweep is noise. -->
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>ProcessType</key>
+  <string>Background</string>
+</dict>
+</plist>

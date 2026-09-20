@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-01-16T15:05:00Z",
+  "note": "Approvals are created only by scripts/approve_decision.py. A model decision can never write here. THIS FILE IS A SYNTHETIC EXAMPLE.",
+  "approvals": {
+    "dec_0000000000000001": {
+      "schema_version": 1,
+      "approval_id": "apr_0000000000000001",
+      "decision_id": "dec_0000000000000001",
+      "decision_fingerprint": "0000000000000000000000000000000000000000000000000000000000000000",
+      "policy_fingerprint": "1111111111111111111111111111111111111111111111111111111111111111",
+      "asset": "IDXF",
+      "asset_class": "ETF",
+      "asset_type": "us_etf",
+      "action": "buy",
+      "side": "buy",
+      "max_amount_usd": "10.00",
+      "month": "2026-01",
+      "approved_at": "2026-01-16T15:05:00Z",
+      "expires_at": "2026-01-17T15:05:00Z",
+      "approved_by": "local-cli",
+      "note": "synthetic example"
+    }
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "$comment": [
+    "Platform-level tool isolation for this project.",
+    "These deny rules aim to make Robinhood order-placement tools unavailable during",
+    "normal research sessions, so that 'the agent does not place orders' is enforced by",
+    "the harness and not only by this repository's own code.",
+    "",
+    "VERIFY THIS YOURSELF with /permissions before relying on it. Deny rules are",
+    "documented to take precedence over allow rules, but the exact matcher behaviour",
+    "for MCP tool names should be confirmed in your Claude Code version rather than",
+    "assumed. Treat this file as defence in depth, never as the primary control:",
+    "the primary controls are execution_mode=DRY_RUN, agent_enabled=false, and the",
+    "absence of any order-submission code path in src/.",
+    "",
+    "The PreToolUse hook below confines an UNATTENDED SCHEDULED RUN's writes to",
+    "reports/, research/ and the scheduled log files. It enforces only while",
+    "RH_AGENT_SCHEDULED_RUN=1 is set, which scripts/scheduled_evaluation.sh sets and",
+    "an interactive session does not, so ordinary development here is unaffected.",
+    "",
+    "A path specifier on a file tool (--allowedTools 'Write(reports/**)') was tested",
+    "against Claude Code 2.1.263 and matches NOTHING -- it denied writes to the very",
+    "directory it named, while bare 'Write' allowed them everywhere. The hook is",
+    "therefore what actually scopes the writes; postflight also fingerprints the whole",
+    "repository tree, so an out-of-scope write is reported even if the hook is bypassed.",
+    "",
+    "NOT denied here: the promotion script and the history-ingest script. Both must",
+    "be unavailable to an UNATTENDED run and available to a human (and to an",
+    "interactive session helping one) -- a distinction this file cannot express,",
+    "since its rules apply to every session in the repository equally. The controls",
+    "that CAN express it are used instead: each script refuses outright when",
+    "RH_AGENT_SCHEDULED_RUN=1; both are listed in src/scheduling.FORBIDDEN_SCRIPTS so",
+    "the runners are tested never to invoke them; and a scheduled run is granted at",
+    "most two exact Bash commands anyway (check_status.py and validate_plan.py), so",
+    "it cannot reach either script.",
+    "",
+    "approve_decision.py IS denied here, and the asymmetry is deliberate: approval is",
+    "a human act in every session (CLAUDE.md 0a), whereas minting a PROPOSED decision",
+    "is already within an interactive evaluation's normal authority -- validate_decision.py",
+    "--log does exactly that and is not denied."
+  ],
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/scheduled_write_guard.py\"",
+            "timeout": 15,
+            "statusMessage": "Checking scheduled write scope..."
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "deny": [
+      "mcp__robinhood-trading__place_crypto_order",
+      "mcp__robinhood-trading__place_option_order",
+      "mcp__robinhood-trading__review_equity_order",
+      "mcp__robinhood-trading__review_option_order",
+      "mcp__robinhood-trading__preview_crypto_order",
+      "mcp__robinhood-trading__cancel_equity_order",
+      "mcp__robinhood-trading__cancel_crypto_order",
+      "mcp__robinhood-trading__cancel_option_order",
+      "mcp__robinhood-trading__exercise_option",
+      "mcp__robinhood-trading__cancel_option_exercise",
+      "mcp__robinhood-trading__create_watchlist",
+      "mcp__robinhood-trading__update_watchlist",
+      "mcp__robinhood-trading__add_to_watchlist",
+      "mcp__robinhood-trading__remove_from_watchlist",
+      "mcp__robinhood-trading__add_option_to_watchlist",
+      "mcp__robinhood-trading__remove_option_from_watchlist",
+      "mcp__robinhood-trading__follow_watchlist",
+      "mcp__robinhood-trading__unfollow_watchlist",
+      "mcp__robinhood-trading__create_alert",
+      "mcp__robinhood-trading__update_alert",
+      "mcp__robinhood-trading__delete_alert",
+      "mcp__robinhood-trading__mark_alerts_read",
+      "mcp__robinhood-trading__create_scan",
+      "mcp__robinhood-trading__update_scan_config",
+      "mcp__robinhood-trading__update_scan_filters",
+      "Bash(python3 scripts/approve_decision.py:*)",
+      "mcp__robinhood-trading__place_equity_order"
+    ]
+  }
+}
