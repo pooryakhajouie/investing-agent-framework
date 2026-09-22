@@ -791,6 +791,28 @@ a fresh quote (≤5 min equities, ≤60 s crypto); and price movement since pric
 within tolerance (**2% equities, 5% crypto**). Exceeding the price tolerance
 returns `REAPPROVAL_REQUIRED`; a stale quote returns `REEVALUATION_REQUIRED`.
 
+### An abandoned approval must not hold the month hostage
+
+An approval that has been granted but not yet submitted **reserves its dollars
+against the month's authorization**, because neither the broker nor the local
+ledger can see it. That is correct — up to the moment the purchase is abandoned.
+A decision left sitting in `APPROVED` after its preflight failed on price drift
+goes on reserving dollars that nothing can ever spend, quietly shrinking the
+month for a purchase that will never happen.
+
+So an abandoned decision is **closed out**, by a human, through
+`scripts/close_stale_decision.py`, on one of three checkable grounds: a failed
+live preflight (`preflight`), an expired approval (`expired`), or explicit
+written abandonment (`abandoned`). Time passing alone is not a ground. The
+decision moves to `REEVALUATION_REQUIRED`, which releases the reservation and
+from which there is **no path back to `APPROVED`** — the same asset at a new
+price, or on a changed thesis, needs a new evaluation, a new `decision_id` and a
+new human approval.
+
+Nothing is deleted. The approval record, the decision log entry, the execution
+record's own history and the audit trail all survive, and hand-editing any of
+those files to free up authorization is tampering (`CLAUDE.md` §6).
+
 The executor **re-checks permission, never the thesis.** It will not substitute a
 different security. If circumstances changed materially it stops and asks for a
 new evaluation.

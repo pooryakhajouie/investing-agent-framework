@@ -24,7 +24,12 @@ from src.allocation import (  # noqa: E402
     validate_plan,
 )
 from src.approval import ApprovalRecord  # noqa: E402
-from src.execution import ExecutionState  # noqa: E402
+from src.execution import (  # noqa: E402
+    ALL_STATES,
+    IN_FLIGHT_STATES,
+    RELEASED_STATES,
+    ExecutionState,
+)
 from src.models import ZERO  # noqa: E402
 from src.reconciliation import Reconciliation  # noqa: E402
 from tests.helpers import (  # noqa: E402
@@ -442,6 +447,53 @@ class SiblingReservationTests(unittest.TestCase):
                 self.assertEqual(
                     sibling_reservations_usd(approvals, {"leg-a": state}, "2026-09"), ZERO
                 )
+
+    def test_a_reevaluation_required_sibling_releases_its_reservation(self):
+        """A decision whose priced premise is gone reserves nothing.
+
+        Left in APPROVED, such a leg goes on holding dollars against a
+        purchase that can never legally happen, and the month silently
+        shrinks. Once closed out, the reservation must go.
+        """
+        approvals = {"leg-a": self.approval("leg-a", "10.00")}
+        states = {"leg-a": ExecutionState.REEVALUATION_REQUIRED}
+        self.assertEqual(sibling_reservations_usd(approvals, states, "2026-09"), ZERO)
+
+    def test_a_reapproval_required_sibling_still_reserves(self):
+        """The same decision, at the same price, can still become APPROVED."""
+        approvals = {"leg-a": self.approval("leg-a", "10.00")}
+        states = {"leg-a": ExecutionState.REAPPROVAL_REQUIRED}
+        self.assertEqual(
+            sibling_reservations_usd(approvals, states, "2026-09"), Decimal("10.00")
+        )
+
+    def test_every_released_state_releases_and_nothing_else_does(self):
+        approvals = {"leg-a": self.approval("leg-a", "10.00")}
+        for state in ALL_STATES:
+            with self.subTest(state=state):
+                reserved = sibling_reservations_usd(
+                    approvals, {"leg-a": state}, "2026-09"
+                )
+                released = state in RELEASED_STATES or state in IN_FLIGHT_STATES
+                self.assertEqual(reserved, ZERO if released else Decimal("10.00"))
+
+    def test_a_split_plans_other_legs_still_reserve_normally(self):
+        """Closing one leg out must not disturb its siblings."""
+        approvals = {
+            "leg-a": self.approval("leg-a", "10.00"),
+            "leg-b": self.approval("leg-b", "8.00"),
+            "leg-c": self.approval("leg-c", "5.00"),
+        }
+        states = {"leg-a": ExecutionState.REEVALUATION_REQUIRED}
+        self.assertEqual(
+            sibling_reservations_usd(approvals, states, "2026-09"), Decimal("13.00")
+        )
+        self.assertEqual(
+            sibling_reservations_usd(
+                approvals, states, "2026-09", exclude_decision_id="leg-b"
+            ),
+            Decimal("5.00"),
+        )
 
     def test_other_months_are_ignored(self):
         approvals = {"leg-a": self.approval("leg-a", "10.00", month="2026-08")}

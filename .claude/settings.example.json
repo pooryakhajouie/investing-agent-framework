@@ -36,7 +36,17 @@
     "approve_decision.py IS denied here, and the asymmetry is deliberate: approval is",
     "a human act in every session (CLAUDE.md 0a), whereas minting a PROPOSED decision",
     "is already within an interactive evaluation's normal authority -- validate_decision.py",
-    "--log does exactly that and is not denied."
+    "--log does exactly that and is not denied.",
+    "",
+    "close_stale_decision.py is denied for the same reason. Closing a stale decision out",
+    "releases part of the month's authorization back to the budget and writes",
+    "state/executions.json, so it moves the pipeline exactly as approval does -- in the",
+    "other direction, but by the same hand. It is a human act in every session, and the",
+    "model has no business performing it however obviously correct the closure looks.",
+    "The script ALSO refuses when RH_AGENT_SCHEDULED_RUN=1 or RH_AGENT_SCHEDULED_POST_RUN=1,",
+    "and is listed in src/scheduling.FORBIDDEN_SCRIPTS, so an unattended run cannot reach",
+    "it by any route. None of this touches a human typing the command in their own",
+    "terminal: these rules bind Claude's Bash tool, not the shell."
   ],
   "hooks": {
     "PreToolUse": [
@@ -55,6 +65,7 @@
   },
   "permissions": {
     "deny": [
+      "mcp__robinhood-trading__place_equity_order",
       "mcp__robinhood-trading__place_crypto_order",
       "mcp__robinhood-trading__place_option_order",
       "mcp__robinhood-trading__review_equity_order",
@@ -81,7 +92,8 @@
       "mcp__robinhood-trading__update_scan_config",
       "mcp__robinhood-trading__update_scan_filters",
       "Bash(python3 scripts/approve_decision.py:*)",
-      "mcp__robinhood-trading__place_equity_order"
+      "Bash(python3 scripts/close_stale_decision.py:*)",
+      "Bash(./scripts/close_stale_decision.py:*)"
     ]
   }
 }

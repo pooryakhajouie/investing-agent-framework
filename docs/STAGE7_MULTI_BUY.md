@@ -79,6 +79,34 @@ byte-identical to Stage 5. Compute it with
 I/O of its own. Already-submitted siblings are excluded, because the broker
 reports those itself and counting them twice would understate the authorization.
 
+### 2a. When a leg stops reserving
+
+A leg reserves its dollars for exactly as long as it could still be submitted on
+the strength of an approval it has, or one a human could still give it. Two
+groups of states end that, and one deliberately does not:
+
+| Execution state | Reserves? | Why |
+|---|---|---|
+| `PROPOSED` | yes | it is still a live candidate for this month's budget |
+| `APPROVED` | **yes** | approved and unsubmitted is the whole reason this exists |
+| `PRE_EXECUTION_VALIDATED` | yes | a ticket is minted; submission is imminent |
+| `REAPPROVAL_REQUIRED` | **yes** | the *same* leg, same price, same amount, can legally become `APPROVED` again — releasing it would let the month be double-spent |
+| `REEVALUATION_REQUIRED` | **no** | the priced premise is gone; this leg can never be submitted, so holding dollars against it only shrinks the month for no one |
+| `SUBMITTED` / `SUBMISSION_UNCERTAIN` / `PARTIALLY_FILLED` / `FILLED` | no | the broker reports these itself |
+| `REJECTED` / `EXPIRED` / `CANCELLED` / `EXECUTION_FAILED` | no | terminal |
+
+`src.execution.RELEASED_STATES` is the second group: every terminal state plus
+`REEVALUATION_REQUIRED`. `sibling_reservations_usd()` skips it.
+
+**This is not automatic, and it must not be.** A leg does not release its
+dollars because time passed or because a check happened to fail; it releases
+them when a human closes it out through `scripts/close_stale_decision.py` on a
+checkable ground. See `CLAUDE.md` §11a, Stage 8.
+
+Closing one leg leaves every sibling exactly where it was: reservations are
+computed per decision id, there is no plan-level state, and the released dollars
+return to the *month's* pool rather than to the plan.
+
 ### 3. Cross-leg reasoning
 
 Each leg of a split must carry an `allocation_rationale`:

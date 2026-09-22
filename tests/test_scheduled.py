@@ -28,6 +28,8 @@ from src.scheduling import (  # noqa: E402
     WRITABLE_DURING_SNAPSHOT_REFRESH,
     is_writable_during_snapshot_refresh,
     WRITABLE_DURING_SCHEDULED_RUN,
+    approval_changes,
+    approval_inventory,
     archive_inventory,
     archive_losses,
     digest_tree,
@@ -42,7 +44,9 @@ from src.scheduling import (  # noqa: E402
     MUTATING_TOOLS,
     ORDER_TOOLS,
     REQUIRED_REPORT_SECTIONS,
+    HUMAN_ONLY_SCRIPTS,
     check_approval_script_denied,
+    check_human_only_scripts_denied,
     check_denied_tools,
     check_no_pending_submission,
     check_switches,
@@ -87,6 +91,21 @@ class ShippedSchedulerSafetyTests(unittest.TestCase):
     def test_the_approval_script_is_denied_in_the_real_settings(self):
         violations, _ = check_approval_script_denied(real_settings())
         self.assertEqual(violations, [])
+
+    def test_every_human_only_script_is_denied_in_the_real_settings(self):
+        violations, checks = check_human_only_scripts_denied(real_settings())
+        self.assertEqual(violations, [])
+        self.assertIn("close_stale_decision_script_denied", checks)
+
+    def test_the_close_script_is_denied_to_the_model_in_every_session(self):
+        """Releasing authorization is a human act exactly as approving is.
+
+        The rule binds Claude's Bash tool, not the shell: a human still runs
+        the script from their own terminal.
+        """
+        deny = "\n".join(real_settings()["permissions"]["deny"])
+        self.assertIn("scripts/close_stale_decision.py", deny)
+        self.assertIn("scripts/approve_decision.py", deny)
 
     def test_no_unresolved_submission_in_the_repository(self):
         violations, _ = check_no_pending_submission(REPO_ROOT)
@@ -231,6 +250,25 @@ class DeniedToolTests(unittest.TestCase):
         violations, _ = check_approval_script_denied(denying(*ORDER_TOOLS))
         self.assertTrue(violations)
 
+    def test_each_human_only_script_is_required_independently(self):
+        """Denying one of the two is not denying both."""
+        for present, missing in (
+            ("approve_decision.py", "close_stale_decision.py"),
+            ("close_stale_decision.py", "approve_decision.py"),
+        ):
+            with self.subTest(missing=missing):
+                settings = {"permissions": {
+                    "deny": ["Bash(python3 scripts/%s:*)" % present]}}
+                violations, _ = check_human_only_scripts_denied(settings)
+                self.assertTrue(any(missing in v for v in violations), violations)
+                self.assertFalse(any(present in v for v in violations), violations)
+
+    def test_every_human_only_script_has_a_stated_reason(self):
+        for script, why in HUMAN_ONLY_SCRIPTS.items():
+            with self.subTest(script=script):
+                self.assertIn(script, FORBIDDEN_SCRIPTS)
+                self.assertTrue(why.strip())
+
 
 class PostflightTests(unittest.TestCase):
     """A run that mutated the safety surface fails, whatever its report said."""
@@ -304,6 +342,181 @@ class PostflightTests(unittest.TestCase):
                     rel in ("state/approvals.json", "state/pending_submission.json")
                     or rel in ("state/executions.json", "state/budget.json")
                 )
+
+
+class ApprovalStoreUnchangedTests(unittest.TestCase):
+    """A report-only run must not *change* the approval store.
+
+    Asserting the store was *empty* instead is wrong in any repository that
+    has ever been used: a historical approval from a prior, human-driven
+    live-execution attempt sits on disk quite legitimately, and failing on its
+    mere presence fails runs that created nothing -- while the same
+    ``SafetyCheck`` reports ``no_approval_created``. A check that contradicts
+    itself gets ignored, and an ignored check catches nothing.
+
+    Every real movement is still a violation.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        os.makedirs(os.path.join(self.tmp, "state"))
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.path = os.path.join(self.tmp, "state", "approvals.json")
+
+    def write(self, approvals):
+        with open(self.path, "w", encoding="utf-8") as handle:
+            json.dump({"schema_version": 1, "updated_at": "2026-01-15T10:30:00Z",
+                       "approvals": approvals}, handle)
+
+    def approval(self, decision_id="dec_synthetic_0001", amount="10.00"):
+        return {
+            "approval_id": "apr_synthetic_0001",
+            "decision_id": decision_id,
+            "max_amount_usd": amount,
+            "asset": "EXMP",
+            "month": "2026-01",
+        }
+
+    def digest(self):
+        return {"surface": surface_digest(REPO_ROOT),
+                "archive": {}, "tree": {},
+                "approvals": approval_inventory(self.tmp)}
+
+    def check(self, before):
+        return postflight_safety(before, self.digest(), repo_root=self.tmp)
+
+    # --- the PASS cases ---------------------------------------------------
+
+    def test_no_approvals_before_or_after_passes(self):
+        before = self.digest()
+        self.assertTrue(self.check(before).ok, self.check(before).violations)
+
+    def test_an_empty_store_before_and_after_passes(self):
+        self.write({})
+        before = self.digest()
+        self.assertTrue(self.check(before).ok, self.check(before).violations)
+
+    def test_a_pre_existing_approval_left_alone_passes(self):
+        """The case that used to fail: a historical approval, nothing touched."""
+        self.write({"dec_synthetic_0001": self.approval()})
+        before = self.digest()
+        check = self.check(before)
+        self.assertTrue(check.ok, check.violations)
+        self.assertIn("approval_store_unchanged", check.checks)
+        self.assertIn("no_approval_created", check.checks)
+
+    def test_a_rewritten_updated_at_header_alone_is_not_an_approval_change(self):
+        self.write({"dec_synthetic_0001": self.approval()})
+        before = self.digest()
+        with open(self.path, encoding="utf-8") as handle:
+            data = json.load(handle)
+        data["updated_at"] = "2026-01-15T23:59:59Z"
+        with open(self.path, "w", encoding="utf-8") as handle:
+            json.dump(data, handle)
+        self.assertTrue(self.check(before).ok)
+
+    # --- the FAIL cases ---------------------------------------------------
+
+    def test_a_new_approval_is_caught(self):
+        before = self.digest()
+        self.write({"dec_synthetic_0002": self.approval("dec_synthetic_0002")})
+        check = self.check(before)
+        self.assertFalse(check.ok)
+        self.assertTrue(any("dec_synthetic_0002" in v and "created" in v
+                            for v in check.violations), check.violations)
+
+    def test_a_new_approval_beside_a_historical_one_is_caught(self):
+        self.write({"dec_synthetic_0001": self.approval()})
+        before = self.digest()
+        self.write({"dec_synthetic_0001": self.approval(),
+                    "dec_synthetic_0002": self.approval("dec_synthetic_0002")})
+        check = self.check(before)
+        self.assertFalse(check.ok)
+        self.assertTrue(any("dec_synthetic_0002" in v for v in check.violations))
+        self.assertFalse(any("dec_synthetic_0001" in v for v in check.violations))
+
+    def test_a_modified_approval_is_caught(self):
+        self.write({"dec_synthetic_0001": self.approval()})
+        before = self.digest()
+        self.write({"dec_synthetic_0001": self.approval(amount="25.00")})
+        check = self.check(before)
+        self.assertFalse(check.ok)
+        self.assertTrue(any("modified" in v for v in check.violations),
+                        check.violations)
+
+    def test_a_removed_approval_is_caught(self):
+        self.write({"dec_synthetic_0001": self.approval()})
+        before = self.digest()
+        self.write({})
+        check = self.check(before)
+        self.assertFalse(check.ok)
+        self.assertTrue(any("removed" in v for v in check.violations),
+                        check.violations)
+
+    def test_a_deleted_approvals_file_is_caught(self):
+        self.write({"dec_synthetic_0001": self.approval()})
+        before = self.digest()
+        os.remove(self.path)
+        check = self.check(before)
+        self.assertFalse(check.ok)
+        self.assertTrue(any("deleted" in v for v in check.violations),
+                        check.violations)
+
+    def test_an_approval_replaced_with_another_id_is_caught(self):
+        self.write({"dec_synthetic_0001": self.approval()})
+        before = self.digest()
+        self.write({"dec_synthetic_0002": self.approval("dec_synthetic_0002")})
+        check = self.check(before)
+        self.assertFalse(check.ok)
+        self.assertTrue(any("dec_synthetic_0001" in v and "removed" in v
+                            for v in check.violations), check.violations)
+        self.assertTrue(any("dec_synthetic_0002" in v and "created" in v
+                            for v in check.violations), check.violations)
+
+    def test_an_unreadable_store_after_a_run_fails_closed(self):
+        self.write({"dec_synthetic_0001": self.approval()})
+        before = self.digest()
+        with open(self.path, "w", encoding="utf-8") as handle:
+            handle.write("{ this is not json")
+        check = self.check(before)
+        self.assertFalse(check.ok)
+        self.assertTrue(any("could not be read" in v for v in check.violations),
+                        check.violations)
+
+    # --- the shape of the inventory itself --------------------------------
+
+    def test_the_inventory_names_the_decision_not_just_the_file(self):
+        self.write({"dec_synthetic_0001": self.approval()})
+        inventory = approval_inventory(self.tmp)
+        self.assertTrue(inventory["present"])
+        self.assertTrue(inventory["readable"])
+        self.assertEqual(list(inventory["approvals"]), ["dec_synthetic_0001"])
+
+    def test_a_missing_file_and_an_empty_store_hold_the_same_approvals(self):
+        absent = approval_inventory(self.tmp)
+        self.write({})
+        empty = approval_inventory(self.tmp)
+        self.assertEqual(absent["approvals"], empty["approvals"])
+        # Neither holds an approval, so no approval moved -- but a run that
+        # conjured the file is still writing to a forbidden state path, and
+        # says so rather than being waved through on "it is empty anyway".
+        changes = approval_changes(absent, empty)
+        self.assertEqual(changes, ["state/approvals.json was created during a "
+                                   "report-only run"])
+
+    def test_run_digest_carries_the_approval_baseline(self):
+        digest = run_digest(REPO_ROOT)
+        self.assertIn("approvals", digest)
+        self.assertIn("approvals", digest["approvals"])
+
+    def test_a_digest_with_no_baseline_falls_back_to_the_stricter_rule(self):
+        """An in-flight run started under the old code is not checked less."""
+        self.write({"dec_synthetic_0001": self.approval()})
+        legacy = surface_digest(REPO_ROOT)  # the pre-digest shape
+        check = postflight_safety(legacy, dict(legacy), repo_root=self.tmp)
+        self.assertFalse(check.ok)
+        self.assertTrue(any("no baseline" in v for v in check.violations),
+                        check.violations)
 
 
 class PreflightBlocksOnUncertainSubmissionTests(unittest.TestCase):

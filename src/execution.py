@@ -182,6 +182,11 @@ VALID_TRANSITIONS: Dict[str, Tuple[str, ...]] = {
     ExecutionState.EXECUTION_FAILED: (),
     ExecutionState.REAPPROVAL_REQUIRED: (
         ExecutionState.APPROVED, ExecutionState.CANCELLED, ExecutionState.EXPIRED,
+        # Strictly de-escalating: a decision sent back for re-approval can be
+        # found to need a whole new evaluation instead, and closing that route
+        # off must not require cancelling it outright. There is deliberately no
+        # edge back -- REEVALUATION_REQUIRED can never become APPROVED again.
+        ExecutionState.REEVALUATION_REQUIRED,
     ),
     ExecutionState.REEVALUATION_REQUIRED: (
         ExecutionState.CANCELLED, ExecutionState.EXPIRED,
@@ -191,6 +196,26 @@ VALID_TRANSITIONS: Dict[str, Tuple[str, ...]] = {
 TERMINAL_STATES = frozenset(
     s for s, targets in VALID_TRANSITIONS.items() if not targets
 )
+# States in which a decision no longer holds any of the month's authorization.
+#
+# A decision reserves dollars for exactly as long as it could still be
+# submitted on the strength of the approval it already has, or of one a human
+# could still give it. Two kinds of state end that:
+#
+#   terminal              nothing further can happen to this decision at all;
+#   REEVALUATION_REQUIRED the decision's own premise is gone -- the price it
+#                         was approved at is no longer the market, or the quote
+#                         it rested on is stale. There is no edge from here to
+#                         APPROVED, by design, so it can never be submitted:
+#                         acting on this asset again needs a *new* decision, a
+#                         new decision_id and a new approval, and that new
+#                         decision reserves its own dollars.
+#
+# REAPPROVAL_REQUIRED is deliberately NOT here. The same decision, at the same
+# price, for the same amount, can still legally become APPROVED again, so its
+# dollars are still spoken for and releasing them would let the month be
+# double-spent.
+RELEASED_STATES = frozenset(TERMINAL_STATES | {ExecutionState.REEVALUATION_REQUIRED})
 # The only state from which a submission may be attempted.
 EXECUTABLE_STATES = frozenset({ExecutionState.PRE_EXECUTION_VALIDATED})
 # States that mean an order may already exist at the broker.
@@ -200,6 +225,214 @@ IN_FLIGHT_STATES = frozenset({
     ExecutionState.PARTIALLY_FILLED,
     ExecutionState.FILLED,
 })
+
+
+# --------------------------------------------------------------------------
+# Closing out an approved-but-unsubmitted decision
+# --------------------------------------------------------------------------
+#
+# An approval is permission to buy *this* asset, for *this* amount, at roughly
+# *this* price. When the price stops being roughly that price, the permission
+# has not merely paused — its premise is gone.
+#
+# Nothing used to write that down. ``preflight`` computes a ``next_state`` on
+# failure and every caller discarded it, so a decision whose live preflight had
+# failed on price drift stayed ``APPROVED`` indefinitely, and
+# ``sibling_reservations_usd`` went on reserving its dollars against a month's
+# authorization it could never legally spend. The month silently shrank for a
+# purchase that would never happen, and nothing in the system said so.
+#
+# The close is a deliberate, human-invoked act and it must be *grounded*: time
+# passing is not a ground, and neither is finding the reservation inconvenient.
+# Exactly three grounds exist, and each is checkable rather than asserted.
+#
+# What the close does NOT do: it deletes nothing. The approval record stays in
+# ``state/approvals.json``, the audit trail stays in
+# ``logs/execution_audit.jsonl``, and the decision stays in
+# ``logs/decisions.jsonl``. It also never pretends the decision executed. It
+# records that this decision can no longer be acted on, which is a disposition,
+# not a deletion — and it cannot be laundered back into an approval, because
+# ``REEVALUATION_REQUIRED`` has no edge to ``APPROVED``.
+
+#: A failed live preflight, on grounds that invalidate the decision itself.
+CLOSURE_GROUND_PREFLIGHT = "PREFLIGHT_INVALIDATED"
+#: The approval's own TTL or month boundary has passed — an existing rule.
+CLOSURE_GROUND_EXPIRED = "APPROVAL_EXPIRED"
+#: A human says, explicitly and in writing, that they are not doing this.
+CLOSURE_GROUND_ABANDONED = "HUMAN_ABANDONED"
+
+CLOSURE_GROUNDS = (
+    CLOSURE_GROUND_PREFLIGHT,
+    CLOSURE_GROUND_EXPIRED,
+    CLOSURE_GROUND_ABANDONED,
+)
+
+#: Preflight blockers that invalidate the *decision*, not merely the moment.
+#:
+#: Each of these means the priced premise the human approved no longer holds,
+#: so no amount of re-approving the same payload makes it executable: the
+#: payload states a price that is not the market. Contrast ``POLICY_CHANGED``
+#: and ``DECISION_MODIFIED``, which are deliberately absent — those have their
+#: own, narrower lifecycle (``REAPPROVAL_REQUIRED`` -> ``APPROVED``) in which
+#: the same decision legitimately survives a fresh human look.
+DECISION_INVALIDATING_CODES = frozenset({
+    "PRICE_MOVED_BEYOND_TOLERANCE",
+    "STALE_QUOTE",
+    "APPROVAL_EXPIRED",
+    "APPROVAL_MONTH_ROLLED_OVER",
+})
+
+#: The codes that on their own establish :data:`CLOSURE_GROUND_EXPIRED`.
+EXPIRY_CODES = frozenset({"APPROVAL_EXPIRED", "APPROVAL_MONTH_ROLLED_OVER"})
+
+
+@dataclass
+class ClosurePlan:
+    """Whether, and how, an unsubmitted decision may be closed out.
+
+    Pure data. Nothing here writes, and a plan is not a transition: a caller
+    still has to perform it through :func:`src.execution_store.transition`,
+    which re-checks the state machine.
+    """
+
+    ok: bool
+    target_state: str = ""
+    ground: str = ""
+    codes: Tuple[str, ...] = ()
+    reason: str = ""
+    already_closed: bool = False
+    refusals: List[Tuple[str, str]] = field(default_factory=list)
+
+    @property
+    def refusal_codes(self) -> List[str]:
+        return [code for code, _ in self.refusals]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "ok": self.ok,
+            "target_state": self.target_state,
+            "ground": self.ground,
+            "codes": list(self.codes),
+            "reason": self.reason,
+            "already_closed": self.already_closed,
+            "refusals": [{"code": c, "message": m} for c, m in self.refusals],
+        }
+
+
+def plan_closure(
+    current_state: str,
+    ground: str,
+    codes: Any = (),
+    note: str = "",
+) -> ClosurePlan:
+    """Decide whether this decision may be closed, and to which state.
+
+    Idempotent by construction: a decision already in a released state returns
+    ``ok=True, already_closed=True`` and asks for no transition at all, so
+    re-running a close is safe and changes nothing.
+    """
+    codes = tuple(str(c) for c in (codes or ()))
+
+    if current_state in RELEASED_STATES:
+        return ClosurePlan(
+            ok=True,
+            already_closed=True,
+            ground=ground,
+            codes=codes,
+            reason="already in %s; it reserves nothing and can no longer be "
+                   "submitted" % current_state,
+        )
+
+    if current_state in IN_FLIGHT_STATES:
+        return ClosurePlan(
+            ok=False,
+            refusals=[(
+                "ORDER_MAY_EXIST",
+                "decision is in %s: an order may exist at the broker. Reconcile "
+                "with scripts/reconcile_submission.py first. A reservation is "
+                "never released by assuming nothing happened." % current_state,
+            )],
+        )
+
+    if ground not in CLOSURE_GROUNDS:
+        return ClosurePlan(
+            ok=False,
+            refusals=[(
+                "UNKNOWN_CLOSURE_GROUND",
+                "%r is not a recognised ground; one of %s is required"
+                % (ground, ", ".join(CLOSURE_GROUNDS)),
+            )],
+        )
+
+    matched: Tuple[str, ...] = ()
+    if ground == CLOSURE_GROUND_PREFLIGHT:
+        matched = tuple(c for c in codes if c in DECISION_INVALIDATING_CODES)
+        if not matched:
+            return ClosurePlan(
+                ok=False,
+                ground=ground,
+                codes=codes,
+                refusals=[(
+                    "UNGROUNDED_CLOSURE",
+                    "a live preflight reported %s, none of which invalidates the "
+                    "decision itself (%s do). A decision is not closed out "
+                    "because a check failed; it is closed out because its priced "
+                    "premise is gone."
+                    % (", ".join(codes) or "no blockers",
+                       ", ".join(sorted(DECISION_INVALIDATING_CODES))),
+                )],
+            )
+        reason = ("live preflight invalidated the decision: %s" % ", ".join(matched))
+    elif ground == CLOSURE_GROUND_EXPIRED:
+        matched = tuple(c for c in codes if c in EXPIRY_CODES)
+        if not matched:
+            return ClosurePlan(
+                ok=False,
+                ground=ground,
+                codes=codes,
+                refusals=[(
+                    "UNGROUNDED_CLOSURE",
+                    "the approval is not expired: re-verification reported %s. "
+                    "Time passing is not a ground for closing an approved "
+                    "decision." % (", ".join(codes) or "no blockers"),
+                )],
+            )
+        reason = "the approval is no longer valid: %s" % ", ".join(matched)
+    else:
+        if not (note or "").strip():
+            return ClosurePlan(
+                ok=False,
+                ground=ground,
+                codes=codes,
+                refusals=[(
+                    "ABANDONMENT_UNEXPLAINED",
+                    "human abandonment must be written down: supply the reason "
+                    "in the record's own history, or use a checkable ground.",
+                )],
+            )
+        reason = "abandoned by the owner: %s" % note.strip()
+
+    target = ExecutionState.REEVALUATION_REQUIRED
+    try:
+        assert_transition(current_state, target)
+    except InvalidTransition as exc:
+        return ClosurePlan(
+            ok=False,
+            ground=ground,
+            codes=codes,
+            refusals=[("ILLEGAL_TRANSITION", str(exc))],
+        )
+
+    if note.strip() and ground != CLOSURE_GROUND_ABANDONED:
+        reason = "%s (%s)" % (reason, note.strip())
+
+    return ClosurePlan(
+        ok=True,
+        target_state=target,
+        ground=ground,
+        codes=matched or codes,
+        reason=reason,
+    )
 
 
 def assert_transition(current: str, target: str) -> None:

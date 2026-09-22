@@ -663,8 +663,15 @@ def sibling_reservations_usd(
     only records *executed* purchases), so without this they would be double
     spent. Anything already submitted is excluded — the broker reports that
     itself, and counting it twice would understate the remaining authorization.
+
+    A decision also stops reserving once it enters a **released** state — any
+    terminal state, or ``REEVALUATION_REQUIRED``, which means the priced
+    premise the approval rested on is gone and only a *new* decision with a
+    *new* approval could act on the asset. Holding dollars against a decision
+    that can never be submitted quietly shrinks the month's authorization for
+    no reason anyone can act on, while nothing is pending and no order exists.
     """
-    from src.execution import IN_FLIGHT_STATES, TERMINAL_STATES  # local: avoid cycle
+    from src.execution import IN_FLIGHT_STATES, RELEASED_STATES  # local: avoid cycle
 
     counted = ZERO
     for decision_id, record in (approvals or {}).items():
@@ -676,7 +683,7 @@ def sibling_reservations_usd(
         if record_month != month:
             continue
         state = (execution_states or {}).get(decision_id, "APPROVED")
-        if state in IN_FLIGHT_STATES or state in TERMINAL_STATES:
+        if state in IN_FLIGHT_STATES or state in RELEASED_STATES:
             continue
         amount = getattr(record, "max_amount_usd", None)
         if amount is None and isinstance(record, dict):

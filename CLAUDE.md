@@ -47,6 +47,12 @@ approval — but the protection that actually holds today is that execution is
 disabled outright. Do not treat the other layers as permission to test the
 boundary.
 
+The same applies to the opposite move. **You must never run
+`scripts/close_stale_decision.py`** either — closing an abandoned decision out
+releases part of the month's authorization back to the budget and rewrites the
+execution ledger, which moves the pipeline as surely as approving does. Show the
+user the exact command and let them run it. The lifecycle is §11a, Stage 8.
+
 Also never put `approved`, `approval`, `approved_by`, `user_approved`, or
 `execution_state` into a decision payload. The guardrails reject it as
 `SELF_APPROVAL_ATTEMPTED`, and so does the executor.
@@ -668,6 +674,73 @@ It defaults to zero, so single-leg behaviour is unchanged. Compute it with
 `src.allocation.sibling_reservations_usd()` — `src/execution.py` still performs
 no I/O of its own.
 
+### Stage 8: an abandoned approval is closed out, never left to rot
+
+An approval that has been granted but not yet submitted **reserves its dollars
+against the month's budget**, because neither the broker nor the local ledger
+can see it. Correct — right up until the purchase is abandoned. Then it is a
+silent reduction of the month's authorization that nothing can spend and nobody
+notices: a decision whose fresh quote exceeded the equity drift limit, and which
+was therefore never submitted, holds its dollars indefinitely unless something
+says otherwise.
+
+**Which states hold authorization, and which release it:**
+
+| State | Reserves? | Because |
+|---|---|---|
+| `PROPOSED` | yes | still a live candidate for this month |
+| `APPROVED` | **yes** | approved-but-unsubmitted is the whole point of the reservation |
+| `PRE_EXECUTION_VALIDATED` | yes | a ticket is minted |
+| `REAPPROVAL_REQUIRED` | **yes** | the *same* decision, same price, can legally become `APPROVED` again |
+| `REEVALUATION_REQUIRED` | **no** | the priced premise is gone; it can never be submitted |
+| in-flight / terminal | no | the broker reports these, or nothing further can happen |
+
+`src.execution.RELEASED_STATES` is every terminal state plus
+`REEVALUATION_REQUIRED`; `src.allocation.sibling_reservations_usd()` skips it.
+
+> **`REEVALUATION_REQUIRED` has no transition back to `APPROVED`.** That is
+> deliberate and it is the safety property: a closed decision can never be
+> re-approved and never be submitted. A new price, or a changed thesis, requires
+> a **new evaluation, a new `decision_id` and a new human approval**. The old
+> approval is superseded, never reused.
+
+**Closing one out is a human act, and it is grounded.** The only supported route
+is `scripts/close_stale_decision.py`, on one of exactly three grounds, each
+checked rather than asserted:
+
+| `--ground` | Established by |
+|---|---|
+| `preflight` | a live preflight (needs `--snapshot`) reporting `PRICE_MOVED_BEYOND_TOLERANCE`, `STALE_QUOTE`, `APPROVAL_EXPIRED` or `APPROVAL_MONTH_ROLLED_OVER` |
+| `expired` | re-verification of the approval reporting an expiry code |
+| `abandoned` | the owner's own written reason, in `--note` |
+
+Time passing alone is not a ground. `POLICY_CHANGED` alone is not one either —
+that has its own, narrower lifecycle (`REAPPROVAL_REQUIRED -> APPROVED`). A
+record in any in-flight state is refused outright: reconcile first, because a
+reservation is never released by assuming nothing happened.
+
+**Nothing is deleted.** The approval stays in `state/approvals.json`, the ledger
+entry stays in `logs/decisions.jsonl`, the record keeps its full `history`, and
+`STATE_CHANGE` plus `DECISION_CLOSED` are appended to
+`logs/execution_audit.jsonl`. Closing does not pretend the decision executed, and
+re-running it is a safe no-op.
+
+> **You must never run `scripts/close_stale_decision.py`**, exactly as with
+> `approve_decision.py` (§0a). It is denied to you in `.claude/settings.json`,
+> it refuses outright under `RH_AGENT_SCHEDULED_RUN` or
+> `RH_AGENT_SCHEDULED_POST_RUN`, and it is in
+> `src.scheduling.FORBIDDEN_SCRIPTS`. Releasing authorization moves the pipeline
+> as surely as approving does, and a closure that looks obviously correct is
+> still not yours to perform. Show the user the command; let them run it.
+
+And never hand-edit `state/executions.json`, `state/approvals.json`,
+`state/budget.json` or any log to free up authorization. That is tampering (§6),
+and it destroys the only record of what was approved and why it was not bought.
+
+The runbook is `docs/FIRST_LIVE_PURCHASE.md` §11a.
+
+---
+
 ## 11b. Scheduled evaluations are REPORT ONLY
 
 `scheduler/` and `prompts/scheduled_evaluation.md` define an unattended weekday
@@ -683,7 +756,12 @@ other recommendation.
 
 `scripts/check_scheduled_safety.py` digests the safety surface before and after
 every run; a run that mutates a protected file is reported as a failure whatever
-its report says. The schedule is **not installed** — see `scheduler/README.md`.
+its report says. The approval store is inventoried the same way, per decision
+id: what postflight requires is that a report-only run **did not change** it,
+not that it is empty. A pre-existing approval from a prior human-driven attempt
+is allowed to sit there untouched; an approval created, modified, removed or
+replaced during the run is a safety failure, and an approvals file that cannot
+be read afterwards is one too. The schedule is **not installed** — see `scheduler/README.md`.
 
 ### Three output tiers, and why the daily report is short
 

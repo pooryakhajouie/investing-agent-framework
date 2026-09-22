@@ -50,6 +50,10 @@ EVENT_FILL_RECONCILED = "FILL_RECONCILED"
 EVENT_STATE_CHANGE = "STATE_CHANGE"
 EVENT_FAILURE = "FAILURE"
 EVENT_EXECUTION_REFUSED = "EXECUTION_REFUSED"
+# An approved-but-unsubmitted decision closed out on a checkable ground, which
+# releases the month's authorization it was reserving. Never a deletion: the
+# approval and every earlier event stay exactly where they are.
+EVENT_DECISION_CLOSED = "DECISION_CLOSED"
 
 
 class ExecutionStoreError(Exception):

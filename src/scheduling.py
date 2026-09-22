@@ -165,7 +165,23 @@ FORBIDDEN_SCRIPTS = (
     "promote_latest_recommendation.py",
     # Ingest writes personal financial history from gathered broker payloads.
     "ingest_history.py",
+    # Closing a decision out releases part of the month's authorization and
+    # writes state/executions.json. Both are human acts, and neither becomes
+    # one because an unattended run would find the dollars useful.
+    "close_stale_decision.py",
 )
+
+#: Scripts that must be denied to the *model* in every session, interactive or
+#: not, mapped to why. These move the pipeline — one toward execution, one back
+#: out of it — and a human performs both. The deny rules live in
+#: ``.claude/settings.json``; this is what checks they are still there.
+HUMAN_ONLY_SCRIPTS = {
+    "approve_decision.py":
+        "a scheduled run must never be able to approve anything",
+    "close_stale_decision.py":
+        "closing a decision out releases monthly authorization and rewrites the "
+        "execution ledger; a scheduled run must never do either",
+}
 
 # State files a scheduled run must never create or modify.
 FORBIDDEN_STATE_WRITES = (
@@ -472,12 +488,181 @@ def archive_inventory(repo_root: str = REPO_ROOT) -> Dict[str, Dict[str, Any]]:
     return inventory
 
 
+# --------------------------------------------------------------------------
+# The approval store: unchanged, not empty
+# --------------------------------------------------------------------------
+#
+# The invariant a report-only run owes is **"it did not change the approval
+# store"**, not **"the approval store is empty"**. Those are different claims,
+# and asserting the second is wrong in a repository that has ever been used: a
+# historical approval from a prior, human-driven live-execution attempt sits on
+# disk quite legitimately, so postflight failed runs that had created nothing —
+# while the very same postflight reported ``no_approval_created``. A check that
+# can pass and fail on the same fact is not a safety control, it is noise, and
+# noise is how a real approval created by an unattended run would come to be
+# ignored.
+#
+# So the store is inventoried semantically, before and after, keyed by decision
+# id. That detects every way the store can move: an approval created, removed,
+# replaced with a different one, or mutated in place -- including a mutation
+# that preserves the decision id, which a whole-file digest would catch but
+# could not name. The file's own ``updated_at`` header is deliberately excluded:
+# it is metadata about the last save, and a run that rewrote it while changing
+# no approval is still caught, by the whole-tree check that already covers
+# ``state/approvals.json`` as an unwritable path.
+#
+# Fail closed at every step. An approvals file that cannot be read or parsed
+# after a run is a violation, never an empty store.
+
+APPROVAL_STORE_REL = "state/approvals.json"
+
+
+def _approval_entry_sha(value: Any) -> str:
+    """A stable hash of one approval record, whatever shape it is on disk."""
+    try:
+        canonical = json.dumps(value, sort_keys=True, separators=(",", ":"),
+                               default=str)
+    except (TypeError, ValueError):
+        canonical = repr(value)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def approval_inventory(repo_root: str = REPO_ROOT) -> Dict[str, Any]:
+    """A deterministic, per-approval fingerprint of the approval store.
+
+    The shape is always the same three keys, so a snapshot taken when the file
+    did not exist compares cleanly against one taken when it does:
+
+        ``present``    whether ``state/approvals.json`` exists at all
+        ``readable``   whether it parsed; ``False`` is a violation, never {}
+        ``approvals``  ``{decision_id: sha}`` -- the mapping *and* the contents
+    """
+    path = os.path.join(repo_root, "state", "approvals.json")
+    if not os.path.exists(path):
+        return {"present": False, "readable": True, "approvals": {}}
+    try:
+        with open(path, "rb") as handle:
+            raw = handle.read()
+    except OSError:
+        return {"present": True, "readable": False, "approvals": {}}
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        # Unparseable is not empty. Record the bytes so an unreadable file that
+        # *changed* is still distinguishable from one that did not.
+        return {
+            "present": True,
+            "readable": False,
+            "approvals": {},
+            "sha": hashlib.sha256(raw).hexdigest(),
+        }
+
+    if isinstance(data, dict) and isinstance(data.get("approvals"), dict):
+        entries: Dict[str, Any] = data["approvals"]
+    elif isinstance(data, dict):
+        # An approvals file in an unexpected shape -- including the bare
+        # ``{decision_id: record}`` map a test or an older writer might leave.
+        # Inventory it as-is rather than reading it as "no approvals".
+        entries = data
+    else:
+        entries = {"<document>": data}
+
+    return {
+        "present": True,
+        "readable": True,
+        "approvals": {
+            str(key): _approval_entry_sha(value) for key, value in entries.items()
+        },
+    }
+
+
+def digest_approvals(saved: Any) -> Optional[Dict[str, Any]]:
+    """The approval inventory from a snapshot, or None for an older shape."""
+    if isinstance(saved, dict) and isinstance(saved.get("approvals"), dict):
+        return saved["approvals"]
+    return None
+
+
+def approval_changes(
+    before: Optional[Dict[str, Any]], after: Optional[Dict[str, Any]]
+) -> List[str]:
+    """Every way the approval store moved between two inventories.
+
+    ``before`` of ``None`` means the preflight snapshot predates this check and
+    carries no baseline. There is then nothing to compare against, so the old,
+    stricter rule applies instead of silently checking nothing: any approval
+    present at all is reported. An in-flight run started under the old code is
+    thereby still checked, and never less strictly than it was.
+    """
+    after = after or {"present": False, "readable": True, "approvals": {}}
+
+    if before is None:
+        findings: List[str] = []
+        if not after.get("readable", False) and after.get("present", False):
+            findings.append(
+                "%s could not be read after a report-only run, and the preflight "
+                "snapshot carries no approval baseline to compare against; "
+                "failing closed" % APPROVAL_STORE_REL
+            )
+        if after.get("approvals"):
+            findings.append(
+                "%s holds %d approval(s) after a report-only run, and the "
+                "preflight snapshot carries no baseline to prove they predate "
+                "it. Re-run the preflight to record a baseline."
+                % (APPROVAL_STORE_REL, len(after["approvals"]))
+            )
+        return findings
+
+    findings = []
+    if after.get("present", False) and not after.get("readable", False):
+        findings.append(
+            "%s could not be read or parsed after a report-only run; an "
+            "unreadable approval store is never treated as an empty one"
+            % APPROVAL_STORE_REL
+        )
+    if bool(before.get("present")) != bool(after.get("present")):
+        findings.append(
+            "%s was %s during a report-only run"
+            % (APPROVAL_STORE_REL,
+               "created" if after.get("present") else "deleted")
+        )
+    if before.get("sha") != after.get("sha"):
+        findings.append(
+            "%s changed while unparseable during a report-only run"
+            % APPROVAL_STORE_REL
+        )
+
+    before_map = before.get("approvals") or {}
+    after_map = after.get("approvals") or {}
+    for decision_id in sorted(set(before_map) | set(after_map)):
+        was, now = before_map.get(decision_id), after_map.get(decision_id)
+        if was == now:
+            continue
+        if was is None:
+            findings.append(
+                "an approval for %s was created during a report-only run; a "
+                "scheduled run must never approve anything" % decision_id
+            )
+        elif now is None:
+            findings.append(
+                "the approval for %s was removed during a report-only run"
+                % decision_id
+            )
+        else:
+            findings.append(
+                "the approval for %s was modified during a report-only run"
+                % decision_id
+            )
+    return findings
+
+
 def run_digest(repo_root: str = REPO_ROOT) -> Dict[str, Any]:
-    """Everything a postflight needs: protected surface, archive, whole tree."""
+    """Everything a postflight needs: surface, archive, tree, approvals."""
     return {
         "surface": surface_digest(repo_root),
         "archive": archive_inventory(repo_root),
         "tree": repo_tree(repo_root),
+        "approvals": approval_inventory(repo_root),
     }
 
 
@@ -583,18 +768,30 @@ def check_denied_tools(settings: Any) -> Tuple[List[str], List[str]]:
     return violations, checks
 
 
-def check_approval_script_denied(settings: Any) -> Tuple[List[str], List[str]]:
-    """Approval is a human act; the scheduler must not be able to invoke it."""
-    checks = ["approve_decision_script_denied"]
+def check_human_only_scripts_denied(settings: Any) -> Tuple[List[str], List[str]]:
+    """Every script that moves the pipeline must be denied to the model.
+
+    Two scripts qualify, in opposite directions and for the same reason.
+    ``approve_decision.py`` advances a decision toward execution;
+    ``close_stale_decision.py`` closes one out, which releases part of the
+    month's authorization back to the budget. Both are human acts, and a
+    correct-looking closure is no more the model's to perform than a
+    correct-looking approval.
+    """
+    checks = ["%s_script_denied" % script[: -len(".py")]
+              for script in HUMAN_ONLY_SCRIPTS]
     deny = ((settings or {}).get("permissions") or {}).get("deny") or []
     blob = "\n".join(str(entry) for entry in deny)
-    if "approve_decision.py" not in blob:
-        return (
-            ["scripts/approve_decision.py is not denied in .claude/settings.json; "
-             "a scheduled run must never be able to approve anything"],
-            checks,
-        )
-    return [], checks
+    violations = [
+        "scripts/%s is not denied in .claude/settings.json; %s" % (script, why)
+        for script, why in HUMAN_ONLY_SCRIPTS.items()
+        if script not in blob
+    ]
+    return violations, checks
+
+
+#: Kept under its original name because callers and tests import it.
+check_approval_script_denied = check_human_only_scripts_denied
 
 
 def check_no_pending_submission(repo_root: str = REPO_ROOT) -> Tuple[List[str], List[str]]:
@@ -626,7 +823,7 @@ def preflight_safety(
     for fn in (
         lambda: check_switches(config),
         lambda: check_denied_tools(settings),
-        lambda: check_approval_script_denied(settings),
+        lambda: check_human_only_scripts_denied(settings),
         lambda: check_no_pending_submission(repo_root),
     ):
         found, ran = fn()
@@ -649,7 +846,11 @@ def postflight_safety(
     rather than skipped.
     """
     violations: List[str] = []
-    checks: List[str] = ["safety_surface_unchanged", "no_approval_created"]
+    checks: List[str] = [
+        "safety_surface_unchanged",
+        "approval_store_unchanged",
+        "no_approval_created",
+    ]
 
     before_surface, before_archive = split_digest(before)
     after_surface, after_archive = split_digest(after)
@@ -688,18 +889,18 @@ def postflight_safety(
                 "gut one." % "; ".join(losses)
             )
 
-    approvals = os.path.join(repo_root, "state", "approvals.json")
-    if os.path.exists(approvals):
-        try:
-            with open(approvals, "r", encoding="utf-8") as handle:
-                data = json.load(handle)
-        except (OSError, ValueError):
-            data = None
-        if data:
-            violations.append(
-                "state/approvals.json is non-empty after a report-only run. A scheduled "
-                "run must never create an approval."
-            )
+    # The approval store must be *unchanged*, not empty. A historical approval
+    # from a prior human-driven attempt is none of an unattended run's
+    # business, and failing on its mere presence made the two approval checks
+    # contradict each other -- ``no_approval_created`` passing while the run
+    # failed for having found one. Every actual movement is still a violation:
+    # created, removed, replaced or mutated in place.
+    after_approvals = digest_approvals(after)
+    if after_approvals is None:
+        after_approvals = approval_inventory(repo_root)
+    moved = approval_changes(digest_approvals(before), after_approvals)
+    if moved:
+        violations.extend(moved)
 
     pending = os.path.join(repo_root, "state", "pending_submission.json")
     checks.append("no_submission_handoff_created")

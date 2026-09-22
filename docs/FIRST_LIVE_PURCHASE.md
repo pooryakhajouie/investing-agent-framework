@@ -191,6 +191,13 @@ quote freshness, and price movement since the decision was priced (2% equities /
 
 If it fails, stop. Fix the cause or start again. Do not edit the ticket.
 
+**If it fails on price drift or a stale quote, the decision is finished.**
+`PRICE_MOVED_BEYOND_TOLERANCE` and `STALE_QUOTE` do not mean "try again in a
+minute" — they mean the price the human approved is no longer the market, so the
+payload states a price that is not true. Re-approving it would approve that same
+wrong price. Close it out instead, which is §11a below, and let the next
+evaluation produce a decision at the price that actually exists.
+
 ## 8. Write-ahead and hand off
 
 ```bash
@@ -267,6 +274,61 @@ python3 scripts/check_status.py                                    # LIVE TRADIN
 Reconciliation (§10) works fine disarmed — it only reads. Disarm first, then
 reconcile.
 
+## 11a. If you abandoned the purchase, close the decision out
+
+Skip this only if the order was actually submitted. If you disarmed without
+submitting — preflight failed, the price moved, you changed your mind — the
+decision is still sitting in `APPROVED`, and **an approved, unsubmitted decision
+reserves its dollars against the month's authorization**. That is correct while
+you might still submit it. Once you will not, it is a silent reduction of the
+month's budget that nothing can spend and nobody notices: a $10.00 decision
+abandoned days earlier holds a $25.00 month down to $15.00 deployable until
+somebody says otherwise.
+
+```bash
+# see what would change; writes nothing
+python3 scripts/close_stale_decision.py <decision_id> --ground expired --dry-run
+
+# then, for real
+python3 scripts/close_stale_decision.py <decision_id> --ground expired
+```
+
+Pick the ground that is actually true:
+
+| `--ground` | Use when | What it checks |
+|---|---|---|
+| `preflight` | the live preflight failed on price drift or a stale quote | re-runs preflight against `--snapshot` and requires a blocker in `PRICE_MOVED_BEYOND_TOLERANCE`, `STALE_QUOTE`, `APPROVAL_EXPIRED`, `APPROVAL_MONTH_ROLLED_OVER` |
+| `expired` | the approval's 24-hour TTL or the month boundary has passed | re-verifies the approval and requires an expiry code |
+| `abandoned` | you are simply not doing this | requires your reason in `--note`, in writing |
+
+Time passing on its own is **not** a ground, and neither is wanting the money
+back. A `POLICY_CHANGED` verdict alone is not one either — that is what
+re-approval is for.
+
+The decision moves `APPROVED -> REEVALUATION_REQUIRED`, which releases the
+reservation. Everything else is kept: the approval record stays in
+`state/approvals.json`, the ledger entry stays in `logs/decisions.jsonl`, the
+record keeps its full `history`, and two events are appended to
+`logs/execution_audit.jsonl` (`STATE_CHANGE` and `DECISION_CLOSED`).
+
+**Never hand-edit `state/executions.json`, `state/approvals.json`,
+`state/budget.json` or the logs to free up authorization.** That is the
+tampering §6 of `CLAUDE.md` forbids, and it destroys the only record of what was
+approved and why it was not bought.
+
+Running it twice is safe — the second run reports the decision is already closed
+and writes nothing. A scheduled or model-driven run cannot run it at all: it is
+denied in `.claude/settings.json` and refuses under the scheduled-run markers.
+
+### What the closed decision can and cannot do afterwards
+
+`REEVALUATION_REQUIRED` has **no transition back to `APPROVED`**. The decision
+can never be re-approved and never be submitted. Buying that asset now requires
+a **new evaluation, a new `decision_id` and a new human approval**, priced at
+whatever the market is then — which is the point, not a limitation. The old
+approval is superseded, not reusable, and the released dollars simply return to
+the month's pool for whatever the next evaluation concludes, including `WAIT`.
+
 ---
 
 ## Why the order matters — a contradiction that used to make this impossible
@@ -325,9 +387,19 @@ duplicate `decision_id`, so it cannot double-count.
 
 ### "I approved the wrong thing"
 
-Delete the entry from `state/approvals.json`, or wait 24 hours. Any edit to
-`config.json`, `INVESTMENT_POLICY.md`, `src/guardrails.py` or `src/models.py`
-voids all approvals immediately via the policy fingerprint.
+Close it out — do not delete anything:
+
+```bash
+python3 scripts/close_stale_decision.py <decision_id> --ground abandoned \
+    --note "approved the wrong decision_id"
+```
+
+That releases the reservation, keeps the approval and the audit trail, and makes
+the decision permanently unapprovable. Waiting 24 hours also voids the approval,
+as does any edit to `config.json`, `INVESTMENT_POLICY.md`, `src/guardrails.py`
+or `src/models.py` via the policy fingerprint — but an expired approval whose
+record is still `APPROVED` **goes on reserving its dollars** until the decision
+is closed, so do not rely on expiry alone.
 
 ### "A ticket looks wrong"
 

@@ -125,6 +125,49 @@ When that happens the record moves `APPROVED → REAPPROVAL_REQUIRED → APPROVE
 through the human approval script. There is no `APPROVED → APPROVED` edge, so a
 superseded approval is recorded as invalidated rather than silently overwritten.
 
+### Re-approval and re-evaluation are not the same thing
+
+```
+APPROVED ──→ REAPPROVAL_REQUIRED ──→ APPROVED     same decision, re-approvable
+         └─→ REEVALUATION_REQUIRED ──X            no path back; needs a NEW decision
+```
+
+`REAPPROVAL_REQUIRED` means a human must look at *this* decision again — the
+policy surface moved, or the payload did. `REEVALUATION_REQUIRED` means the
+decision's **priced premise is gone**, so re-approving it would re-approve a
+price that is no longer the market. Buying that asset then requires a new
+evaluation, a new `decision_id` and a new human approval.
+
+### Which states hold monthly authorization
+
+An approved-but-unsubmitted decision reserves its dollars against the month's
+budget, because neither the broker nor the local ledger can see it.
+
+| State | Reserves? |
+|---|---|
+| `PROPOSED`, `APPROVED`, `PRE_EXECUTION_VALIDATED` | yes |
+| `REAPPROVAL_REQUIRED` | **yes** — the same decision can still be approved |
+| `REEVALUATION_REQUIRED` | **no** — it can never be submitted |
+| `SUBMITTED` / `SUBMISSION_UNCERTAIN` / `PARTIALLY_FILLED` / `FILLED` | no — the broker reports these |
+| `REJECTED` / `EXPIRED` / `CANCELLED` / `EXECUTION_FAILED` | no — terminal |
+
+`src.execution.RELEASED_STATES` is every terminal state plus
+`REEVALUATION_REQUIRED`, and `sibling_reservations_usd()` skips it.
+
+So a decision whose preflight failed on price drift must be **closed out**
+rather than left in `APPROVED`, or it goes on reserving dollars nothing can
+ever spend:
+
+```bash
+python3 scripts/close_stale_decision.py <decision_id> --ground expired --dry-run
+```
+
+Human-only — denied to the model in `.claude/settings.json` beside
+`approve_decision.py`, refused inside a scheduled run, grounded in a checkable
+invalidation (a failed live preflight, an expired approval, or written
+abandonment), idempotent, and it deletes nothing. See
+`docs/FIRST_LIVE_PURCHASE.md` §11a.
+
 ### Pre-submission checks
 
 Before a ticket is minted, `preflight()` re-establishes everything from scratch:
